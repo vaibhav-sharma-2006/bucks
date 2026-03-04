@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bucks Distribution Analysis Dashboard</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-light: #eff6ff;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            padding: 2rem;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Executive Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .card-title {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .chart-card {
+            grid-column: span 6;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .chart-card.full-width {
+            grid-column: span 12;
+        }
+
+        .chart-card.one-third {
+            grid-column: span 4;
+        }
+
+        .chart-card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: var(--primary-light);
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--primary);
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Insights */
+        .insights-section {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            margin-top: 2.5rem;
+        }
+
+        .insights-section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #f1f5f9;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .insight-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            border-left: 4px solid var(--primary);
+        }
+
+        .insight-item strong {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #cbd5e1;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .chart-card {
+                grid-column: span 12;
+            }
+
+            .chart-card.one-third {
+                grid-column: span 12;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Bucks Distribution Analysis</h1>
+            <p>Analytical report for professional distribution of buck units to SMF & SEF beneficiaries - 2025</p>
+        </header>
+
+        <!-- Summary Statistics -->
+        <div class="summary-grid">
+            <div class="card">
+                <div class="card-title">Total Beneficiaries</div>
+                <div id="total-beneficiaries" class="card-value">--</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Total Bucks Distributed</div>
+                <div id="total-bucks" class="card-value">--</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Villages Covered</div>
+                <div id="total-villages" class="card-value">--</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Double Allocations</div>
+                <div id="double-allocations" class="card-value" style="color: var(--success);">--</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Jati Distribution -->
+            <div class="chart-card full-width">
+                <h2>Caste / Jati Wise Distribution</h2>
+                <div style="height: 400px;">
+                    <canvas id="jatiChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Priority & Type -->
+            <div class="chart-card">
+                <h2>Priority Category Coverage</h2>
+                <canvas id="priorityChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h2>Beneficiary Type (SMF vs SEF)</h2>
+                <canvas id="typeChart"></canvas>
+            </div>
+
+            <!-- Village & Hamlet Tables -->
+            <div class="chart-card full-width">
+                <h2>Key Statistics Table: Top Villages by Distribution</h2>
+                <div class="table-container">
+                    <table id="villageTable">
+                        <thead>
+                            <tr>
+                                <th>Village Name</th>
+                                <th>Total Beneficiaries</th>
+                                <th>Total Bucks Distributed</th>
+                                <th>Impact Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Hamlet Analysis -->
+            <div class="chart-card">
+                <h2>Top Hamlets Analysis</h2>
+                <canvas id="hamletChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h2>Buck Distribution Pattern</h2>
+                <canvas id="patternChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Insights -->
+        <div class="insights-section">
+            <h2>🧠 Smart Observations & Insights</h2>
+            <div class="insights-grid">
+                <div class="insight-item">
+                    <strong>Dominant Caste Group</strong>
+                    <span id="insight-caste">--</span>
+                </div>
+                <div class="insight-item">
+                    <strong>Village Impact</strong>
+                    <span id="insight-village">--</span>
+                </div>
+                <div class="insight-item">
+                    <strong>Program Balance</strong>
+                    <span id="insight-balance">--</span>
+                </div>
+                <div class="insight-item">
+                    <strong>Special Case Allocation</strong>
+                    <span>Confirmed 1 special beneficiary (Sunita Devi) received 2 bucks, while 50 others received 1
+                        buck each.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const data = {
+            "summary": {
+                "total_beneficiaries": 51,
+                "total_bucks": 52,
+                "total_villages": 23,
+                "avg_bucks": 1.02,
+                "two_bucks_count": 1,
+                "one_buck_count": 50
+            },
+            "jati": [
+                { "jati": "Bairwa", "beneficiaries": 1, "bucks": 1 },
+                { "jati": "Bhat", "beneficiaries": 1, "bucks": 1 },
+                { "jati": "Bhil", "beneficiaries": 7, "bucks": 7 },
+                { "jati": "Gurjar", "beneficiaries": 6, "bucks": 6 },
+                { "jati": "Kalbeliya", "beneficiaries": 1, "bucks": 1 },
+                { "jati": "Kharol", "beneficiaries": 1, "bucks": 1 },
+                { "jati": "Meghwanshi", "beneficiaries": 5, "bucks": 5 },
+                { "jati": "Muslim", "beneficiaries": 3, "bucks": 3 },
+                { "jati": "Nat", "beneficiaries": 1, "bucks": 1 },
+                { "jati": "Prajapat", "beneficiaries": 1, "bucks": 1 },
+                { "jati": "Rawat", "beneficiaries": 21, "bucks": 22 },
+                { "jati": "Rebari", "beneficiaries": 1, "bucks": 1 },
+                { "jati": "Regar", "beneficiaries": 1, "bucks": 1 },
+                { "jati": "Sen", "beneficiaries": 1, "bucks": 1 }
+            ],
+            "type": {
+                "SMF": 40,
+                "SEF": 11
+            },
+            "priority": {
+                "Married": 49,
+                "Widow": 1,
+                "Abandoned": 1
+            },
+            "villages": [
+                { "village": "Ramgarh", "beneficiaries": 10, "bucks": 10 },
+                { "village": "Dedpura", "beneficiaries": 5, "bucks": 5 },
+                { "village": "Kanpura", "beneficiaries": 4, "bucks": 4 },
+                { "village": "Kelu", "beneficiaries": 4, "bucks": 4 },
+                { "village": "Surajpura", "beneficiaries": 4, "bucks": 4 },
+                { "village": "Shivpuri", "beneficiaries": 3, "bucks": 3 },
+                { "village": "Amarpura", "beneficiaries": 2, "bucks": 2 },
+                { "village": "Devas", "beneficiaries": 2, "bucks": 2 },
+                { "village": "Pithavas", "beneficiaries": 2, "bucks": 2 },
+                { "village": "Devpura", "beneficiaries": 2, "bucks": 3 },
+                { "village": "Akrol", "beneficiaries": 1, "bucks": 1 },
+                { "village": "Devipura", "beneficiaries": 1, "bucks": 1 },
+                { "village": "Deves", "beneficiaries": 1, "bucks": 1 },
+                { "village": "Keloo", "beneficiaries": 1, "bucks": 1 },
+                { "village": "Kharwa", "beneficiaries": 1, "bucks": 1 },
+                { "village": "Peethawas", "beneficiaries": 1, "bucks": 1 },
+                { "village": "Ladpura", "beneficiaries": 1, "bucks": 1 },
+                { "village": "Kushalpura", "beneficiaries": 1, "bucks": 1 },
+                { "village": "Kirap", "beneficiaries": 1, "bucks": 1 },
+                { "village": "Shivnagar", "beneficiaries": 1, "bucks": 1 },
+                { "village": "Shivagar", "beneficiaries": 1, "bucks": 1 },
+                { "village": "Shivngar", "beneficiaries": 1, "bucks": 1 },
+                { "village": "Shyopura", "beneficiaries": 1, "bucks": 1 }
+            ],
+            "hamlets": [
+                { "hamlet": "Dedpura", "beneficiaries": 4 },
+                { "hamlet": "Amarpura", "beneficiaries": 2 },
+                { "hamlet": "Devas", "beneficiaries": 2 },
+                { "hamlet": "Bhil Basti", "beneficiaries": 2 },
+                { "hamlet": "Jhuto Ka Badiya", "beneficiaries": 2 },
+                { "hamlet": "Jorawarpura", "beneficiaries": 2 },
+                { "hamlet": "Kanpura", "beneficiaries": 2 },
+                { "hamlet": "Kelu", "beneficiaries": 2 },
+                { "hamlet": "Akrol", "beneficiaries": 1 },
+                { "hamlet": "Bairwa Basti", "beneficiaries": 1 },
+                { "hamlet": "Devipura", "beneficiaries": 1 },
+                { "hamlet": "Chunni ka Badiya", "beneficiaries": 1 },
+                { "hamlet": "Bhilon ka Badiya", "beneficiaries": 1 },
+                { "hamlet": "Chado ka Badiya", "beneficiaries": 1 },
+                { "hamlet": "Gariya Nadi", "beneficiaries": 1 },
+                { "hamlet": "Gariya", "beneficiaries": 1 },
+                { "hamlet": "Devpura", "beneficiaries": 1 },
+                { "hamlet": "Dholi Dati", "beneficiaries": 1 },
+                { "hamlet": "Kadela ka Badiya", "beneficiaries": 1 },
+                { "hamlet": "Gopala ka Naka", "beneficiaries": 1 },
+                { "hamlet": "Kampoo", "beneficiaries": 1 },
+                { "hamlet": "Kalbeliya basti", "beneficiaries": 1 },
+                { "hamlet": "Keloo", "beneficiaries": 1 },
+                { "hamlet": "Khatano ka Badiya", "beneficiaries": 1 },
+                { "hamlet": "Kumharo ka bADIYA", "beneficiaries": 1 },
+                { "hamlet": "Ladpura", "beneficiaries": 1 },
+                { "hamlet": "Mala ji ka Badiya", "beneficiaries": 1 },
+                { "hamlet": "Mendu ka Badiya", "beneficiaries": 1 },
+                { "hamlet": "Narayanpura", "beneficiaries": 1 },
+                { "hamlet": "Pithavas (Rupura)", "beneficiaries": 1 },
+                { "hamlet": "Pura hawaldar", "beneficiaries": 1 },
+                { "hamlet": "Rail ka Badiya", "beneficiaries": 1 },
+                { "hamlet": "Ramdev ji Ka Badiya", "beneficiaries": 1 },
+                { "hamlet": "Ramgarh", "beneficiaries": 1 },
+                { "hamlet": "Rebariyo ki dhani", "beneficiaries": 1 },
+                { "hamlet": "Rebariyo ki dhani(Bhil basti)", "beneficiaries": 1 },
+                { "hamlet": "Sai ka Badiya", "beneficiaries": 1 },
+                { "hamlet": "Shivngar", "beneficiaries": 1 },
+                { "hamlet": "Shivpuri", "beneficiaries": 1 },
+                { "hamlet": "Shyopura", "beneficiaries": 1 },
+                { "hamlet": "Surajpura", "beneficiaries": 1 },
+                { "hamlet": "Surel ka Badiiya", "beneficiaries": 1 }
+            ]
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Chart.register(ChartDataLabels);
+
+            // Update Summary
+            document.getElementById('total-beneficiaries').textContent = data.summary.total_beneficiaries;
+            document.getElementById('total-bucks').textContent = data.summary.total_bucks;
+            document.getElementById('total-villages').textContent = data.summary.total_villages;
+            document.getElementById('double-allocations').textContent = data.summary.two_bucks_count;
+
+            // Jati Chart
+            const jatiLabels = data.jati.map(j => j.jati);
+            const jatiBeneficiaries = data.jati.map(j => j.beneficiaries);
+            const jatiBucks = data.jati.map(j => j.bucks);
+
+            new Chart(document.getElementById('jatiChart'), {
+                type: 'bar',
+                data: {
+                    labels: jatiLabels,
+                    datasets: [
+                        {
+                            label: 'Beneficiaries',
+                            data: jatiBeneficiaries,
+                            backgroundColor: '#2563eb',
+                            borderRadius: 6,
+                        },
+                        {
+                            label: 'Bucks Distributed',
+                            data: jatiBucks,
+                            backgroundColor: '#93c5fd',
+                            borderRadius: 6,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 30
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        datalabels: {
+                            color: '#111',
+                            font: { weight: 'bold', size: 10 },
+                            anchor: 'end',
+                            align: 'top',
+                            offset: 4,
+                            formatter: (value) => value
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grace: '10%'
+                        }
+                    }
+                }
+            });
+
+            // Priority Chart
+            new Chart(document.getElementById('priorityChart'), {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(data.priority),
+                    datasets: [{
+                        data: Object.values(data.priority),
+                        backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        datalabels: {
+                            color: '#fff',
+                            font: { weight: 'bold', size: 11 },
+                            formatter: (value, ctx) => {
+                                let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                let percentage = (value * 100 / sum).toFixed(1) + "%";
+                                return value + " (" + percentage + ")";
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Type Chart
+            new Chart(document.getElementById('typeChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data.type),
+                    datasets: [{
+                        data: Object.values(data.type),
+                        backgroundColor: ['#3b82f6', '#8b5cf6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        datalabels: {
+                            color: '#111',
+                            font: { weight: 'bold', size: 11 },
+                            formatter: (value, ctx) => {
+                                let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                let percentage = (value * 100 / sum).toFixed(1) + "%";
+                                return value + " (" + percentage + ")";
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Pattern Chart
+            new Chart(document.getElementById('patternChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['1 Buck', '2 Bucks'],
+                    datasets: [{
+                        data: [data.summary.one_buck_count, data.summary.two_bucks_count],
+                        backgroundColor: ['#2563eb', '#10b981']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '60%',
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        datalabels: {
+                            color: '#111',
+                            font: { weight: 'bold', size: 11 },
+                            formatter: (value, ctx) => {
+                                let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                let percentage = (value * 100 / sum).toFixed(1) + "%";
+                                return value + " (" + percentage + ")";
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Hamlet Chart (Top 10)
+            const topHamlets = data.hamlets.slice(0, 10);
+            new Chart(document.getElementById('hamletChart'), {
+                type: 'bar',
+                data: {
+                    labels: topHamlets.map(h => h.hamlet),
+                    datasets: [{
+                        label: 'Beneficiaries',
+                        data: topHamlets.map(h => h.beneficiaries),
+                        backgroundColor: '#6366f1',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    layout: {
+                        padding: {
+                            right: 40
+                        }
+                    },
+                    plugins: {
+                        datalabels: {
+                            color: '#111',
+                            font: { weight: 'bold', size: 10 },
+                            anchor: 'end',
+                            align: 'right',
+                            offset: 6,
+                            clamp: true,
+                            formatter: (value) => value
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grace: '10%'
+                        }
+                    }
+                }
+            });
+
+            // Village Table
+            const tbody = document.querySelector('#villageTable tbody');
+            data.villages.slice(0, 10).forEach(v => {
+                const row = document.createElement('tr');
+                const impact = ((v.beneficiaries / data.summary.total_beneficiaries) * 100).toFixed(1);
+                row.innerHTML = `
+                        <td>${v.village}</td>
+                        <td font-weight="600">${v.beneficiaries}</td>
+                        <td>${v.bucks}</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <div style="flex-grow: 1; background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden;">
+                                    <div style="background: var(--primary); width: ${impact}%; height: 100%;"></div>
+                                </div>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); min-width: 40px;">${impact}%</span>
+                            </div>
+                        </td>
+                    `;
+                tbody.appendChild(row);
+            });
+
+            // Populate Insights
+            const sortedJati = [...data.jati].sort((a, b) => b.beneficiaries - a.beneficiaries);
+            document.getElementById('insight-caste').textContent = `${sortedJati[0].jati} is the most represented social group with ${sortedJati[0].beneficiaries} beneficiaries (${((sortedJati[0].beneficiaries / data.summary.total_beneficiaries) * 100).toFixed(1)}%).`;
+
+            document.getElementById('insight-village').textContent = `${data.villages[0].village} village saw the highest program impact with ${data.villages[0].beneficiaries} families receiving buck units.`;
+
+            const smfPerc = ((data.type.SMF / data.summary.total_beneficiaries) * 100).toFixed(1);
+            document.getElementById('insight-balance').textContent = `The program maintains a strong focus on Small & Marginal Farmers (SMF), accounting for ${smfPerc}% of total beneficiaries.`;
+        });
+    </script>
+</body>
+
+</html>
